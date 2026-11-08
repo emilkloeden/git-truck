@@ -20,7 +20,8 @@ export default defineConfig(({ isSsrBuild }) => ({
     }
   },
   ssr: {
-    noExternal: isSsrBuild ? true : undefined,
+    // Bundle nuqs in dev so it shares Vite's react-router instance (Node would otherwise resolve the production build)
+    noExternal: isSsrBuild ? true : ["nuqs"],
     external: [
       "@duckdb/node-api",
       "@duckdb/node-bindings-linux-arm64",
