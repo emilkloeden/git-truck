@@ -56,6 +56,38 @@ Run `git truck --help` for advanced options.
 - If the browser does not open automatically, copy or click the URL from the terminal.
 - Large repositories can take a little while to analyze the first time and may feel slow to navigate and interact with.
 
+## Running from source without Bun
+
+[CONTRIBUTING.md](./CONTRIBUTING.md) assumes [Bun](https://bun.sh/). If Bun is not available, Node.js (>= 22) plus [pnpm](https://pnpm.io/) works:
+
+```sh
+# Install dependencies. The hoisted linker gives a flat node_modules like bun install does.
+pnpm install --config.node-linker=hoisted
+
+# Keep pnpm's lockfile out of git without touching .gitignore
+echo "pnpm-lock.yaml" >> .git/info/exclude
+```
+
+pnpm may finish with `ERR_PNPM_IGNORED_BUILDS` for esbuild. The packages are still installed and the warning is safe to ignore.
+
+Run scripts with `node --run`, which puts `node_modules/.bin` on the PATH without needing npm or bun:
+
+| Task          | Command                                         |
+| :------------ | :---------------------------------------------- |
+| Dev server    | `node --run dev:node`                           |
+| Unit tests    | `node --run test:unit`                          |
+| Typecheck     | `node --run typecheck`                          |
+| Lint / format | `node --run lint` / `node --run format:check`   |
+| Build         | `node --run build-vite && node --run build-cli` |
+| Run built CLI | `node cli.mjs`                                  |
+
+Notes:
+
+- The dev server runs headless and prints the URL to open. If port 3000 is taken (e.g. by an installed `git-truck`), it picks the next free port.
+- Avoid `bun ...` scripts (`dev`, `dev:bun`, `update-deps`, `changeset`, `release`) and scripts that chain `npm run` (`build`, `test`, `check`, `check:write`); use the individual scripts above instead.
+- `pnpm exec` and `npx` are not needed. `pnpm exec` re-checks the install and fails on the ignored esbuild build script.
+- `npm install` is not an alternative: npm 10 crashes on this dependency tree (`Cannot read properties of null (reading 'edgesOut')`).
+
 ## Learn more
 
 - [Feature overview](https://git-truck.github.io/git-truck/docs)

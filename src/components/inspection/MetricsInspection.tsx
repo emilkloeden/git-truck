@@ -10,6 +10,7 @@ import { useClickedObject, useClickedObjectPath, useBlobColor } from "~/state/st
 import { cn } from "~/styling"
 import { usePathIsRepositoryRoot } from "~/hooks"
 import { FileSizeMetric } from "~/metrics/fileSize"
+import { LineCountMetric, formatLineCount } from "~/metrics/lineCount"
 import { ContributorsMetric } from "~/metrics/contributors"
 import type { MetricType } from "~/metrics/metrics"
 import { CommitsMetric } from "~/metrics/mostCommits"
@@ -87,6 +88,16 @@ export function MetricsInspection() {
       data: (() => {
         return byteSize(clickedObject.byteSize).value + " " + byteSize(clickedObject.byteSize).unit
       })()
+    },
+    LINE_COUNT: {
+      description: "Lines of code",
+      icon: LineCountMetric.icon,
+      data:
+        clickedObject.lineCount !== undefined
+          ? formatLineCount(clickedObject.lineCount)
+          : isBlob
+            ? "Binary file"
+            : "Unknown"
     },
     MOST_COMMITS: {
       description: commitCount === 1 ? "Commit" : "Commits",

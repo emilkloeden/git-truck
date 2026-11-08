@@ -2,6 +2,7 @@ import languageMap from "language-map/languages.json" with { type: "json" }
 import type { GitObject, HexColor } from "~/shared/model"
 import { isBlob } from "~/shared/util"
 import { reduceTree } from "~/shared/utils/tree"
+import { scaleLinear, scaleLog } from "d3"
 
 interface ColorResult {
   lang: string
@@ -102,4 +103,31 @@ export function getMinMaxValuesForMetric(
 
   traverse(root)
   return { min: min === Infinity ? 0 : min, max: max === -Infinity ? 0 : max }
+}
+
+export function uniqueSorted(values: number[]): number[] {
+  return values
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b)
+    .filter((v, i, arr) => i === 0 || v > arr[i - 1])
+}
+
+export function getPrettyThresholds(min: number, max: number, desiredBuckets = 7): number[] {
+  if (max <= min) return [max]
+
+  // Prefer logarithmic nice ticks (suits heavily skewed values like file sizes); fallback to linear when needed.
+  const logMin = Math.max(1, min)
+  let ticks = scaleLog().domain([logMin, max]).nice().ticks(desiredBuckets)
+
+  if (ticks.length < 2) {
+    ticks = scaleLinear().domain([min, max]).nice().ticks(desiredBuckets)
+  }
+
+  // Cap to desiredBuckets to avoid overwhelming legends
+  const filtered = uniqueSorted(ticks).filter((t) => t > min && t < max)
+  if (filtered.length > desiredBuckets) {
+    const step = Math.ceil(filtered.length / desiredBuckets)
+    return filtered.filter((_, i) => i % step === 0)
+  }
+  return filtered
 }

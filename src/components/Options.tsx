@@ -7,6 +7,7 @@ import { SizeMetric } from "~/metrics/sizeMetric"
 import { pickKey as pickKey } from "~/shared/utils/object"
 import { LayoutGroups, Layouts, type LayoutType } from "~/layouts/layouts"
 import { FileSizeMetric } from "~/metrics/fileSize"
+import { LineCountMetric } from "~/metrics/lineCount"
 import { CommitsMetric } from "~/metrics/mostCommits"
 import { LinesChangedMetric } from "~/metrics/linesChanged"
 import { mdiScaleBalance } from "@mdi/js"
@@ -15,6 +16,7 @@ import { LastChangedMetric } from "~/metrics/lastChanged"
 export const relatedSizeMetric: Record<MetricType, SizeMetricType> = {
   FILE_TYPE: "FILE_SIZE",
   FILE_SIZE: "FILE_SIZE",
+  LINE_COUNT: "LINE_COUNT",
   TOP_CONTRIBUTOR: "MOST_CONTRIBUTIONS",
   MOST_COMMITS: "MOST_COMMITS",
   LAST_CHANGED: "LAST_CHANGED",
@@ -34,6 +36,7 @@ export function Options() {
   const sizeMetricIcons = pickKey(
     {
       FILE_SIZE: FileSizeMetric,
+      LINE_COUNT: LineCountMetric,
       MOST_COMMITS: CommitsMetric,
       MOST_CONTRIBUTIONS: LinesChangedMetric,
       EQUAL_SIZE: { icon: mdiScaleBalance },

@@ -11,6 +11,7 @@ import { scaleOrdinal } from "d3"
 import sha1 from "sha1"
 import type { SizeMetricType } from "~/metrics/sizeMetric"
 import { FileSizeMetric } from "~/metrics/fileSize"
+import { LineCountMetric } from "~/metrics/lineCount"
 import { ContributorsMetric } from "./contributors"
 import type { ReactNode } from "react"
 import type { MetricPanelButton } from "~/components/inspection/MetricInspectionPanel"
@@ -26,6 +27,7 @@ export const Metrics = {
   LAST_CHANGED: LastChangedMetric,
   FILE_TYPE: TypeMetric,
   FILE_SIZE: FileSizeMetric,
+  LINE_COUNT: LineCountMetric,
   MOST_COMMITS: CommitsMetric,
   MOST_CONTRIBUTIONS: LinesChangedMetric,
   TOP_CONTRIBUTOR: TopContributorMetric,
@@ -152,6 +154,7 @@ export function createMetricDataForNode(
 
 export const sizeMetricDescriptions: Record<SizeMetricType, string> = {
   FILE_SIZE: "Files are sized based on their file size in bytes.",
+  LINE_COUNT: "Files are sized based on their number of lines. Binary files are not counted.",
   EQUAL_SIZE: "All files are sized equally.",
   MOST_COMMITS: "Files are sized based on the number of commits in the selected time range.",
   LAST_CHANGED: "Files are sized based on how long ago they were changed.",
@@ -203,6 +206,7 @@ function getMetricCalcs(
     TOP_CONTRIBUTOR: TopContributorMetric.metricFunctionFactory(data, root, options),
     MOST_CONTRIBUTIONS: LinesChangedMetric.metricFunctionFactory(data, root, options),
     FILE_SIZE: FileSizeMetric.metricFunctionFactory(data, root, options),
+    LINE_COUNT: LineCountMetric.metricFunctionFactory(data, root, options),
     CONTRIBUTORS: ContributorsMetric.metricFunctionFactory(data, root, options)
   }
 }

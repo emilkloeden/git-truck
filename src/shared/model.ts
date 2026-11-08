@@ -59,6 +59,8 @@ export type RawGitObject = {
   path: string
   name: string
   byteSize: number
+  /** Number of lines; undefined for binary blobs. For trees, the sum over text blobs */
+  lineCount?: number
 }
 
 type RefType = "Branches" | "Tags"
@@ -178,6 +180,7 @@ export interface DatabaseInfo {
   topContributors: Record<string, { contributor: string; contribcount: number; hasTie: boolean }>
   commitCounts: Record<string, number>
   fileSizes: Record<string, number>
+  lineCounts: Record<string, number>
   lastChanged: Record<string, number>
   contributorCounts: Record<string, number>
   maxCommitCount: number
@@ -186,6 +189,8 @@ export interface DatabaseInfo {
   oldestChangeDate: number
   maxFileSize: number
   minFileSize: number
+  maxLineCount: number
+  minLineCount: number
   contributors: Person[]
   contributorGroups: ContributorGroup[]
   fileTree: GitTreeObject
