@@ -33,6 +33,9 @@ type FileTreeResult = {
 
 export type AnalysisStatus = "Initialized" | "ProcessingCommitHistory" | "CommitHistoryProcessed" | "Aborted"
 
+/** Symlinks are stored as blobs containing the link target, which should not count as lines */
+const SYMLINK_MODE = "120000"
+
 export class Analysis {
   public status: AnalysisStatus = "Initialized"
   public gitService: GitService
@@ -42,6 +45,8 @@ export class Analysis {
   public progressRevision = 0
   private fileTreeAsOf: string | null = null
   private fileTreeResult: FileTreeResult | null = null
+  /** Blob hash -> line count (null for binary), so moving the time range only reads new blobs */
+  private lineCountByHash = new Map<string, number | null>()
   private timeIntervalMutex = new DisposableMutex()
   private currentTimeInterval: { start: number; end: number } | null = null
   public prevResult:
@@ -156,6 +161,7 @@ export class Analysis {
         const byteSize = Number(groups["size"] === "-" ? 0 : groups["size"])
         return {
           type: groups["type"] as "blob" | "tree",
+          mode: groups["mode"],
           hash: groups["hash"],
           byteSize: Number.isFinite(byteSize) ? byteSize : 0,
           path: this.repositoryName + "/" + groups["path"],
@@ -163,22 +169,32 @@ export class Analysis {
         }
       })
 
+    log.time("count lines")
+    const blobLineCounts = await this.getLineCounts(
+      gitEntries.filter((e) => e.type === "blob" && e.mode !== SYMLINK_MODE).map((e) => e.hash)
+    )
+    log.timeEnd("count lines")
+
     log.time("calculate tree sizes")
     const treeSizes = new Map<string, number>([[this.repositoryName, 0]])
+    const treeLineCounts = new Map<string, number>([[this.repositoryName, 0]])
 
     for (const entry of gitEntries) {
       if (entry.type === "tree") {
         treeSizes.set(entry.path, 0)
+        treeLineCounts.set(entry.path, 0)
       }
     }
 
     for (const entry of gitEntries) {
       if (entry.type !== "blob") continue
+      const lineCount = entry.mode === SYMLINK_MODE ? 0 : (blobLineCounts.get(entry.hash) ?? 0)
 
       let parentEnd = entry.path.lastIndexOf("/")
       while (parentEnd !== -1) {
         const parentPath = entry.path.slice(0, parentEnd)
         treeSizes.set(parentPath, (treeSizes.get(parentPath) ?? 0) + entry.byteSize)
+        treeLineCounts.set(parentPath, (treeLineCounts.get(parentPath) ?? 0) + lineCount)
         if (parentPath === this.repositoryName) break
         parentEnd = parentPath.lastIndexOf("/")
       }
@@ -190,13 +206,19 @@ export class Analysis {
       path: this.repositoryName,
       name: this.repositoryName,
       hash: this.fileTreeAsOf,
-      byteSize: treeSizes.get(this.repositoryName) ?? 0
+      byteSize: treeSizes.get(this.repositoryName) ?? 0,
+      lineCount: treeLineCounts.get(this.repositoryName) ?? 0
     }
 
     const lsTreeEntries: RawGitObject[] = [
       rootEntry,
       ...gitEntries.map((entry) =>
-        entry.type === "tree" ? { ...entry, byteSize: treeSizes.get(entry.path) ?? 0 } : entry
+        entry.type === "tree"
+          ? { ...entry, byteSize: treeSizes.get(entry.path) ?? 0, lineCount: treeLineCounts.get(entry.path) ?? 0 }
+          : {
+              ...entry,
+              lineCount: entry.mode === SYMLINK_MODE ? undefined : (blobLineCounts.get(entry.hash) ?? undefined)
+            }
       )
     ]
 
@@ -208,7 +230,7 @@ export class Analysis {
     await this.db.replaceFiles(lsTreeEntries)
 
     const treeByPath = new Map<string, GitTreeObject>([[rootTree.path, rootTree]])
-    for (const child of gitEntries) {
+    for (const child of lsTreeEntries.slice(1)) {
       const newPath = `${child.path}`
       const newName = newPath.slice(newPath.lastIndexOf("/") + 1)
       const parentPath = newPath.slice(0, newPath.lastIndexOf("/"))
@@ -225,6 +247,7 @@ export class Analysis {
             path: newPath,
             name: newName,
             byteSize: child.byteSize,
+            lineCount: child.lineCount,
             children: []
           }
 
@@ -240,7 +263,8 @@ export class Analysis {
             path: newPath,
             name: newName,
             extension: newName.substring(newName.lastIndexOf(".") + 1),
-            byteSize: child.byteSize as number
+            byteSize: child.byteSize,
+            lineCount: child.lineCount
           }
           currTree.children.push(blob)
           break
@@ -251,6 +275,14 @@ export class Analysis {
     this.treeCleanup(rootTree)
     this.fileTreeResult = { rootTree, fileCount }
     return this.fileTreeResult
+  }
+
+  private async getLineCounts(hashes: string[]) {
+    const uncached = [...new Set(hashes)].filter((hash) => !this.lineCountByHash.has(hash))
+    for (const [hash, lineCount] of await this.gitService.countLinesInBlobs(uncached)) {
+      this.lineCountByHash.set(hash, lineCount)
+    }
+    return this.lineCountByHash
   }
 
   public async getFileTree() {
@@ -271,22 +303,24 @@ export class Analysis {
       if (node.type === "blob") return node
 
       let byteSize = 0
+      let lineCount = 0
       const children: GitObject[] = []
       for (const child of node.children) {
         const filteredChild = filterNode(child)
         if (!filteredChild) continue
 
         byteSize += filteredChild.byteSize
+        lineCount += filteredChild.lineCount ?? 0
         children.push(filteredChild)
       }
 
       if (children.length === 0 && node.path !== this.repositoryName) return null
-      return { ...node, byteSize, children }
+      return { ...node, byteSize, lineCount, children }
     }
 
     const rootTree = filterNode(tree)
     if (!rootTree || rootTree.type !== "tree") {
-      return { rootTree: { ...tree, byteSize: 0, children: [] }, fileCount: 0 }
+      return { rootTree: { ...tree, byteSize: 0, lineCount: 0, children: [] }, fileCount: 0 }
     }
 
     return {

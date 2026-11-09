@@ -3,39 +3,12 @@ import { type MetricCache, type SegmentBucket, type SegmentedMetric } from "~/me
 import { noEntryColor, UNKNOWN_CATEGORY } from "~/const"
 import { mdiResize } from "@mdi/js"
 import { hslToHex, isBlob, rgbToHex } from "~/shared/util"
-import { interpolateCool, scaleLog, scaleLinear } from "d3"
-import { SpectrumTranslater } from "~/metrics/metricUtils"
+import { interpolateCool } from "d3"
+import { getPrettyThresholds, SpectrumTranslater, uniqueSorted } from "~/metrics/metricUtils"
 import { feature_flags } from "~/feature_flags"
 import { SegmentLegend, type SegmentLegendData } from "~/components/legend/SegmentLegend"
 import type { GradLegendData } from "~/components/legend/GradiantLegend"
 import byteSize from "byte-size"
-
-function uniqueSorted(values: number[]): number[] {
-  return values
-    .filter((v) => Number.isFinite(v))
-    .sort((a, b) => a - b)
-    .filter((v, i, arr) => i === 0 || v > arr[i - 1])
-}
-
-function getPrettyThresholds(min: number, max: number, desiredBuckets = 7): number[] {
-  if (max <= min) return [max]
-
-  // Prefer logarithmic nice ticks for file sizes; fallback to linear when needed.
-  const logMin = Math.max(1, min)
-  let ticks = scaleLog().domain([logMin, max]).nice().ticks(desiredBuckets)
-
-  if (ticks.length < 2) {
-    ticks = scaleLinear().domain([min, max]).nice().ticks(desiredBuckets)
-  }
-
-  // Cap to desiredBuckets to avoid overwhelming legends
-  const filtered = uniqueSorted(ticks).filter((t) => t > min && t < max)
-  if (filtered.length > desiredBuckets) {
-    const step = Math.ceil(filtered.length / desiredBuckets)
-    return filtered.filter((_, i) => i % step === 0)
-  }
-  return filtered
-}
 
 export const FileSizeMetric: SegmentedMetric = {
   name: "File size",

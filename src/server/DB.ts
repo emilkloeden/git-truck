@@ -185,6 +185,10 @@ export default class DB {
         type VARCHAR NOT NULL,
         byteSize UINTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS fileLineCounts (
+        path VARCHAR NOT NULL,
+        lineCount UINTEGER NOT NULL
+      );
 
     `)
   }
@@ -203,7 +207,8 @@ export default class DB {
       DELETE FROM hiddenFiles;
       DELETE FROM metadata;
       DELETE FROM temporaryRenames;
-      DELETE FROM files;`)
+      DELETE FROM files;
+      DELETE FROM fileLineCounts;`)
   }
 
   public async createIndexes() {
@@ -1139,6 +1144,16 @@ export default class DB {
         appender.endRow()
       }
     })
+
+    await this.run(`DELETE FROM fileLineCounts;`)
+    await this.usingTableAppender("fileLineCounts", async (appender) => {
+      for (const file of files) {
+        if (file.type !== "blob" || file.lineCount === undefined) continue
+        appender.appendVarchar(file.path)
+        appender.appendUInteger(file.lineCount)
+        appender.endRow()
+      }
+    })
   }
 
   public async getFiles() {
@@ -1247,6 +1262,30 @@ export default class DB {
     const result: Record<string, number> = {}
     res.forEach((row) => {
       result[row["path"] as string] = Number(row["byteSize"])
+    })
+
+    return result
+  }
+
+  public async getMaxAndMinLineCount() {
+    const res = await this.query(
+      `SELECT MAX(l.lineCount) as max_lines, MIN(l.lineCount) as min_lines
+       FROM fileLineCounts l
+       INNER JOIN filtered_files fi ON fi.path = l.path;`
+    )
+    return { maxLineCount: Number(res[0]["max_lines"] ?? 0), minLineCount: Number(res[0]["min_lines"] ?? 0) }
+  }
+
+  public async getLineCountPerFile(): Promise<Record<string, number>> {
+    const res = await this.query(
+      `SELECT l.path, l.lineCount
+       FROM fileLineCounts l
+       INNER JOIN filtered_files fi ON fi.path = l.path;`
+    )
+
+    const result: Record<string, number> = {}
+    res.forEach((row) => {
+      result[row["path"] as string] = Number(row["lineCount"])
     })
 
     return result

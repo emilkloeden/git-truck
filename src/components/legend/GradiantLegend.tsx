@@ -50,6 +50,8 @@ export function GradientLegend() {
         return data.databaseInfo.lastChanged[path] ?? null
       case "FILE_SIZE":
         return data.databaseInfo.fileSizes[path] ?? null
+      case "LINE_COUNT":
+        return data.databaseInfo.lineCounts[path] ?? null
       default:
         return null
     }

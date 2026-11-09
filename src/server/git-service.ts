@@ -1,4 +1,6 @@
 import { log } from "~/server/log"
+import { CatFileLineCounter } from "~/server/lineCount"
+import { spawn } from "node:child_process"
 import { getBaseDirFromPath, getRepoNameFromPath, runProcess } from "~/shared/util.server.ts"
 import { promiseHelper, branchCompare, semverCompare } from "~/shared/util.ts"
 
@@ -321,6 +323,38 @@ export class GitService {
     this.catFileCache.set(hash, result)
 
     return result
+  }
+
+  /**
+   * Counts lines in the given blobs by streaming their contents through a single `git cat-file --batch` process.
+   * Binary or missing blobs map to `null`.
+   */
+  async countLinesInBlobs(hashes: string[]): Promise<Map<string, number | null>> {
+    if (hashes.length === 0) return new Map()
+    const originalError = new Error("Command failed: git cat-file --batch")
+
+    return new Promise((done, fail) => {
+      const prcs = spawn("git", ["cat-file", "--batch"], { cwd: resolve(this.repositoryPath) })
+      const counter = new CatFileLineCounter()
+      const err: Buffer[] = []
+
+      prcs.on("error", (e) => {
+        originalError.message += `\nFailed to start process: ${e.message}`
+        fail(originalError)
+      })
+      prcs.stdout.on("data", (chunk: Buffer) => counter.push(chunk))
+      prcs.stderr.on("data", (chunk: Buffer) => err.push(chunk))
+      prcs.on("close", (code) => {
+        if (code === 0) {
+          done(counter.results)
+          return
+        }
+        originalError.message += `\n${Buffer.concat(err).toString().trim() || `Exited with code ${code}`}`
+        fail(originalError)
+      })
+
+      prcs.stdin.end(hashes.join("\n") + "\n")
+    })
   }
 
   async getCommitCount(): Promise<number> {

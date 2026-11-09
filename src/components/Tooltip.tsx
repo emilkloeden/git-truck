@@ -21,6 +21,7 @@ import { useMouse } from "~/hooks"
 import { cn } from "~/styling"
 import type { SizeMetricType } from "~/metrics/sizeMetric"
 import { FileSizeMetric } from "~/metrics/fileSize"
+import { LineCountMetric } from "~/metrics/lineCount"
 import {
   type HoveredBarTooltip,
   getHoveredBarTooltipLines,
@@ -211,6 +212,14 @@ function SizeMetricContent({
       } else {
         content = `${(fileSizeInBytes / (1024 * 1024)).toFixed(1)} MB`
       }
+      break
+    }
+    case "LINE_COUNT": {
+      icon = LineCountMetric.icon
+      content = LineCountMetric.getTooltipContent(hoveredBlob, databaseInfo, {
+        topContributorCutoff: 0,
+        contributorColors: {}
+      })
       break
     }
     case "MOST_COMMITS": {

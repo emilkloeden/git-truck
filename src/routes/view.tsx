@@ -331,6 +331,8 @@ async function analyze(
     prevRes && !shouldUpdate(reason, "commitCounts") ? prevRes.commitCounts : await instance.db.getCommitCountPerFile()
   const fileSizes =
     prevRes && !shouldUpdate(reason, "fileSizes") ? prevRes.fileSizes : await instance.db.getFileSizePerFile()
+  const lineCounts =
+    prevRes && !shouldUpdate(reason, "fileSizes") ? prevRes.lineCounts : await instance.db.getLineCountPerFile()
 
   const lastChanged =
     prevRes && !shouldUpdate(reason, "lastChanged") ? prevRes.lastChanged : await instance.db.getLastChangedPerFile()
@@ -350,6 +352,10 @@ async function analyze(
     prevRes && !shouldUpdate(reason, "maxMinFileSize")
       ? { minFileSize: prevRes.minFileSize, maxFileSize: prevRes.maxFileSize }
       : await instance.db.getMaxAndMinFileSize()
+  const { minLineCount, maxLineCount } =
+    prevRes && !shouldUpdate(reason, "maxMinFileSize")
+      ? { minLineCount: prevRes.minLineCount, maxLineCount: prevRes.maxLineCount }
+      : await instance.db.getMaxAndMinLineCount()
   const authors =
     prevRes && !shouldUpdate(reason, "contributors") ? prevRes.contributors : await instance.db.getAuthors()
   const authorUnions =
@@ -398,6 +404,7 @@ async function analyze(
     topContributors,
     commitCounts,
     fileSizes,
+    lineCounts,
     lastChanged,
     contributorCounts: authorCounts,
     maxCommitCount,
@@ -406,6 +413,8 @@ async function analyze(
     oldestChangeDate,
     minFileSize,
     maxFileSize,
+    minLineCount,
+    maxLineCount,
     contributors: authors,
     contributorGroups: authorUnions,
     fileTree: rootTree,

@@ -604,6 +604,8 @@ function createPartitionedHiearchy({
       switch (sizeMetricType) {
         case "FILE_SIZE":
           return obj.byteSize ?? 1
+        case "LINE_COUNT":
+          return databaseInfo.lineCounts[obj.path] ?? 1
         case "MOST_COMMITS":
           return databaseInfo.commitCounts[obj.path] ?? 1
         case "EQUAL_SIZE":

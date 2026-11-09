@@ -3,6 +3,6 @@ export const gitLogRegex =
 export const gitLogRegexSimple =
   /"<\|(?<parents>.*?)\|><\|(?<author>.*?)\|><\|(?<authorEmail>.*?)\|><\|(?<dateCommitter>\d+)\s(?<dateAuthor>\d+)\|>\s*<\|(?<trailers>[\s\S]*?)\|><\|(?<hash>.+?)\|>"\s*(?<contributions>(?:(?:\d+|-)\s+(?:\d+|-)\s+.+\s?)*)(?<modes>(?:\s.+\s*)*)/gmu
 export const contribRegex = /(?<insertions>\d+|-)\s+(?<deletions>\d+|-)\s+(?<file>.+)/gm
-export const treeRegex = /^\S+? (?<type>\S+) (?<hash>\S+)\s+(?<size>\S+)\s+(?<path>.+)/gm
+export const treeRegex = /^(?<mode>\S+?) (?<type>\S+) (?<hash>\S+)\s+(?<size>\S+)\s+(?<path>.+)/gm
 export const modeRegex = /\s(?<mode>\w+)\s\w+\s\d+\s(?<file>.+)/gmu
 export const OPTIONS_LOCAL_STORAGE_KEY = "options"
