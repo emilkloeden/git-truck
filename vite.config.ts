@@ -11,12 +11,18 @@ import babel from "@rolldown/plugin-babel"
 export default defineConfig(({ isSsrBuild }) => ({
   build: {
     rollupOptions: {
-      external: ["@duckdb/node-api"],
-      ...(isSsrBuild
-        ? {
-            input: "./src/server/app.ts"
-          }
-        : {})
+      external: ["@duckdb/node-api"]
+    }
+  },
+  // React Router 8 builds SSR through the environment API and only reads a custom server entry from here
+  environments: {
+    ssr: {
+      build: {
+        rollupOptions: {
+          external: ["@duckdb/node-api"],
+          input: "./src/server/app.ts"
+        }
+      }
     }
   },
   ssr: {

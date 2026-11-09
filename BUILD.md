@@ -36,6 +36,8 @@ node cli.mjs               # analyze the repository in the current directory
 
 `cli.mjs` loads `build/` and `node_modules/` (for DuckDB) relative to the clone, so run it in place rather than copying it elsewhere.
 
+`build/server/index.js` must end with `export { app }`. If `git-truck` crashes on start with `app.use() requires a middleware function`, the server build used React Router's default entry instead of `src/server/app.ts`. React Router 8 only reads a custom server entry from `environments.ssr.build.rollupOptions.input` in `vite.config.ts`, not from the top-level `build.rollupOptions`.
+
 ## Use it as the default `git-truck`
 
 Put a launcher on your PATH that runs the clone's `cli.mjs`, and uninstall any npm-installed `git-truck` so it does not take precedence.
